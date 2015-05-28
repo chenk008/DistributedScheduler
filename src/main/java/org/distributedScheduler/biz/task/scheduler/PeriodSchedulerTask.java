@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Resource;
 
 import org.apache.commons.lang.StringUtils;
+import org.distributedScheduler.biz.config.ConfigService;
 import org.distributedScheduler.biz.lock.DistributedLock;
 import org.distributedScheduler.biz.task.Task;
 import org.distributedScheduler.biz.task.annotation.SingleRun;
@@ -25,10 +26,12 @@ import org.springframework.core.task.TaskRejectedException;
  * 
  *
  */
-public abstract class PeriodSchedulerTask implements
-		Task {
+public abstract class PeriodSchedulerTask implements Task {
 	private static final Logger logger = LoggerFactory
 			.getLogger(PeriodSchedulerTask.class);
+
+	private static final String PERIOD_CONFIG_PATH = "/distributedScheduler/period/";
+
 	protected static ScheduledExecutorService POOL = Executors
 			.newScheduledThreadPool(10);
 
@@ -37,16 +40,18 @@ public abstract class PeriodSchedulerTask implements
 	@Resource
 	private DistributedLock distributedLock;
 
+	@Resource
+	private ConfigService configService;
+
 	private FetcherStatus status = FetcherStatus.INIT;
 
 	@Override
 	public void init() {
-		SingleRun s = PeriodSchedulerTask.this.getClass()
-				.getAnnotation(SingleRun.class);
+		SingleRun s = PeriodSchedulerTask.this.getClass().getAnnotation(
+				SingleRun.class);
 		if (s != null) {
 			try {
-				String lockKey = PeriodSchedulerTask.this
-						.getClass().getName();
+				String lockKey = PeriodSchedulerTask.this.getClass().getName();
 				int expireTime = getPeriod() - 1;
 				if (expireTime <= 0) {
 					expireTime = 1;
@@ -105,9 +110,8 @@ public abstract class PeriodSchedulerTask implements
 	private int getPeriod() {
 		int period = 0;
 		try {
-			// String data = Diamond.getConfig(this.getClass().getName(),
-			// "SchedulerDataSourceFetcher", 1000);
-			String data = null;
+			String data = configService.getConfig(PERIOD_CONFIG_PATH
+					+ this.getClass().getName());
 			if (StringUtils.isBlank(data)) {
 				period = getDefaultPeriod();
 			} else {

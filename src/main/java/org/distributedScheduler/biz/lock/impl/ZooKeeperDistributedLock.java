@@ -3,29 +3,23 @@ package org.distributedScheduler.biz.lock.impl;
 import java.io.IOException;
 import java.net.InetAddress;
 
+import javax.annotation.Resource;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
 import org.distributedScheduler.biz.lock.DistributedLock;
+import org.distributedScheduler.util.ZKUtils;
 
 public class ZooKeeperDistributedLock implements DistributedLock {
 
-	private ZooKeeper zk;
+	@Resource
+	private ZooKeeper zooKeeper;
 
-	public ZooKeeperDistributedLock() throws Exception {
-		zk = new ZooKeeper("localhost", 2181, new Watcher() {
-
-			@Override
-			public void process(WatchedEvent event) {
-
-			}
-
-		});
-		if (zk.exists("/distributedScheduler/lock", false) == null) {
+	public void init() throws Exception {
+		if (zooKeeper.exists("/distributedScheduler/lock", false) == null) {
 			createNode("/distributedScheduler/lock");
 		}
 	}
@@ -33,8 +27,8 @@ public class ZooKeeperDistributedLock implements DistributedLock {
 	@Override
 	public boolean tryLock(String lockKey, long expireTime) {
 		try {
-			String result = zk.create("/distributedScheduler/lock/" + lockKey,
-					getMessage().getBytes(), Ids.OPEN_ACL_UNSAFE,
+			String result = zooKeeper.create("/distributedScheduler/lock/"
+					+ lockKey, getMessage().getBytes(), Ids.OPEN_ACL_UNSAFE,
 					CreateMode.EPHEMERAL);
 			System.out.println(result);
 			return true;
@@ -47,7 +41,7 @@ public class ZooKeeperDistributedLock implements DistributedLock {
 	@Override
 	public void unlock(String lockKey) {
 		try {
-			zk.delete("/distributedScheduler/lock/" + lockKey, -1);
+			zooKeeper.delete("/distributedScheduler/lock/" + lockKey, -1);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		} catch (KeeperException e) {
@@ -67,8 +61,8 @@ public class ZooKeeperDistributedLock implements DistributedLock {
 		if (nodes != null) {
 			for (String node : nodes) {
 				path = path + "/" + node;
-				if (zk.exists(path, false) == null) {
-					zk.create(path, path.getBytes(), Ids.OPEN_ACL_UNSAFE,
+				if (ZKUtils.existsNode(zooKeeper, path) == null) {
+					ZKUtils.createNode(zooKeeper, path, path,
 							CreateMode.PERSISTENT);
 				}
 			}
