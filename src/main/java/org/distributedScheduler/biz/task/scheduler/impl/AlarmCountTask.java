@@ -4,11 +4,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.distributedScheduler.biz.task.annotation.SingleRun;
-import org.distributedScheduler.biz.task.scheduler.PeriodSchedulerDataSourceFetcher;
+import org.distributedScheduler.biz.task.scheduler.PeriodSchedulerTask;
 
 @SingleRun
-public class AlarmCountDataSourceFetcher extends
-		PeriodSchedulerDataSourceFetcher {
+public class AlarmCountTask extends PeriodSchedulerTask {
 
 	@Override
 	protected Map<String, Object> getData() {
@@ -26,12 +25,4 @@ public class AlarmCountDataSourceFetcher extends
 	protected int getDefaultPeriod() {
 		return 60;
 	}
-
-	@Override
-	public Map<String, String> getDataSourceResultTypes() {
-		Map<String, String> resultTypes = new HashMap<String, String>();
-		resultTypes.put("value", "告警数");
-		return resultTypes;
-	}
-
 }

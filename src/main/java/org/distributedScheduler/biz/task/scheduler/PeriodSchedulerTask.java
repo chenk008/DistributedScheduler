@@ -11,7 +11,7 @@ import javax.annotation.Resource;
 
 import org.apache.commons.lang.StringUtils;
 import org.distributedScheduler.biz.lock.DistributedLock;
-import org.distributedScheduler.biz.task.DataSourceFetcher;
+import org.distributedScheduler.biz.task.Task;
 import org.distributedScheduler.biz.task.annotation.SingleRun;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -25,10 +25,10 @@ import org.springframework.core.task.TaskRejectedException;
  * 
  *
  */
-public abstract class PeriodSchedulerDataSourceFetcher implements
-		DataSourceFetcher {
+public abstract class PeriodSchedulerTask implements
+		Task {
 	private static final Logger logger = LoggerFactory
-			.getLogger(PeriodSchedulerDataSourceFetcher.class);
+			.getLogger(PeriodSchedulerTask.class);
 	protected static ScheduledExecutorService POOL = Executors
 			.newScheduledThreadPool(10);
 
@@ -41,11 +41,11 @@ public abstract class PeriodSchedulerDataSourceFetcher implements
 
 	@Override
 	public void init() {
-		SingleRun s = PeriodSchedulerDataSourceFetcher.this.getClass()
+		SingleRun s = PeriodSchedulerTask.this.getClass()
 				.getAnnotation(SingleRun.class);
 		if (s != null) {
 			try {
-				String lockKey = PeriodSchedulerDataSourceFetcher.this
+				String lockKey = PeriodSchedulerTask.this
 						.getClass().getName();
 				int expireTime = getPeriod() - 1;
 				if (expireTime <= 0) {

@@ -2,7 +2,7 @@ package org.distributedScheduler.biz.task;
 
 import java.util.Map;
 
-public interface DataSourceFetcher {
+public interface Task {
 
 	/**
 	 * 初始化：主动获取挂到定时器，消息数据通过消息中间件来
@@ -19,11 +19,4 @@ public interface DataSourceFetcher {
 	public enum FetcherStatus {
 		INIT, RUNNING, LOCK_FAILED, STOP;
 	}
-
-	/**
-	 * 结果集的key
-	 * 
-	 * @return
-	 */
-	Map<String, String> getDataSourceResultTypes();
 }

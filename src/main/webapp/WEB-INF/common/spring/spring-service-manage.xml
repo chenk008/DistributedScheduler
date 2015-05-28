@@ -8,18 +8,15 @@
 
 	<context:annotation-config />
 
-	<bean id="dataProcessSpringInitation" class="org.distributedScheduler.DataProcessSpringInitation"></bean>
+	<bean id="taskSpringInitation"
+		class="org.distributedScheduler.biz.task.TaskProcessSpringInitation"></bean>
 
-	<bean id="dataSourceFactory"
-		class="org.distributedScheduler.biz.task.DataSourceFactory"
+	<bean id="taskFactory" class="org.distributedScheduler.biz.task.TaskFactory"
 		init-method="start" destroy-method="shutdown"></bean>
 
 	<bean id="distributedLock"
 		class="org.distributedScheduler.biz.lock.impl.ZooKeeperDistributedLock">
 	</bean>
-
-	<!-- <bean id="actionExecuterFactory" class="com.taobao.dq.dataProcess.action.ActionExecuterFactory" 
-		init-method = "init" destroy-method="shutdown"></bean> -->
 
 </beans>
 
