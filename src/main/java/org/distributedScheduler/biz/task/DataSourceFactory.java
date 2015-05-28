@@ -1,4 +1,4 @@
-package org.distributedScheduler.biz.dataFetecher;
+package org.distributedScheduler.biz.task;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -7,9 +7,8 @@ import java.util.Set;
 
 import javax.annotation.Resource;
 
-import org.distributedScheduler.DataProcessSpringInitation;
-import org.distributedScheduler.DataProcessSpringInitation.Scanner;
-import org.distributedScheduler.biz.dataFetecher.scheduler.PeriodSchedulerDataSourceFetcher;
+import org.distributedScheduler.biz.task.TaskProcessSpringInitation.Scanner;
+import org.distributedScheduler.biz.task.scheduler.PeriodSchedulerDataSourceFetcher;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.type.filter.AssignableTypeFilter;
@@ -20,7 +19,7 @@ public class DataSourceFactory {
 	private Map<String, DataSourceFetcher> fetchers = new HashMap<String, DataSourceFetcher>();
 
 	@Resource
-	private DataProcessSpringInitation dataProcessSpringInitation;
+	private TaskProcessSpringInitation dataProcessSpringInitation;
 
 	public void start() throws Exception {
 		Scanner scanner = dataProcessSpringInitation.getScanner();
@@ -35,13 +34,13 @@ public class DataSourceFactory {
 		for (BeanDefinitionHolder bean : beanSet) {
 			DataSourceFetcher dsf = (DataSourceFetcher) applicationContext
 					.getBean(bean.getBeanName());
-			if (fetchers.get(dsf.getDataSourceFetcherType().name()) != null) {
+			if (fetchers.get(dsf.getClass().getName()) != null) {
 				throw new RuntimeException(
 						"dataSourceFetcher has duplicate type:"
-								+ dsf.getDataSourceFetcherType().name());
+								+ dsf.getClass().getName());
 			}
 			dsf.init();
-			fetchers.put(dsf.getDataSourceFetcherType().name(), dsf);
+			fetchers.put(dsf.getClass().getName(), dsf);
 		}
 	}
 

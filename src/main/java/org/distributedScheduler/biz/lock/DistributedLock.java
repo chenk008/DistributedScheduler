@@ -1,4 +1,4 @@
-package org.distributedScheduler.lock;
+package org.distributedScheduler.biz.lock;
 
 public interface DistributedLock {
 

@@ -1,4 +1,4 @@
-package org.distributedScheduler.biz.dataFetecher;
+package org.distributedScheduler.biz.task;
 
 import java.util.Map;
 
@@ -13,8 +13,6 @@ public interface DataSourceFetcher {
 	 * 关闭获取
 	 */
 	void shutdown();
-
-	DataSourceFetcherType getDataSourceFetcherType();
 
 	FetcherStatus getStatus();
 

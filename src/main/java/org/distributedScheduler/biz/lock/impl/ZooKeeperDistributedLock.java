@@ -1,4 +1,4 @@
-package org.distributedScheduler.lock.impl;
+package org.distributedScheduler.biz.lock.impl;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -10,7 +10,7 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
-import org.distributedScheduler.lock.DistributedLock;
+import org.distributedScheduler.biz.lock.DistributedLock;
 
 public class ZooKeeperDistributedLock implements DistributedLock {
 

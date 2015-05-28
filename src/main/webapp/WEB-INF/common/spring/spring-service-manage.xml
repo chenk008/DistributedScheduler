@@ -11,11 +11,11 @@
 	<bean id="dataProcessSpringInitation" class="org.distributedScheduler.DataProcessSpringInitation"></bean>
 
 	<bean id="dataSourceFactory"
-		class="org.distributedScheduler.biz.dataFetecher.DataSourceFactory"
+		class="org.distributedScheduler.biz.task.DataSourceFactory"
 		init-method="start" destroy-method="shutdown"></bean>
 
 	<bean id="distributedLock"
-		class="org.distributedScheduler.lock.impl.ZooKeeperDistributedLock">
+		class="org.distributedScheduler.biz.lock.impl.ZooKeeperDistributedLock">
 	</bean>
 
 	<!-- <bean id="actionExecuterFactory" class="com.taobao.dq.dataProcess.action.ActionExecuterFactory" 

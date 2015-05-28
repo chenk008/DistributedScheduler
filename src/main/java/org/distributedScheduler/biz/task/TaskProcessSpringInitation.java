@@ -1,4 +1,4 @@
-package org.distributedScheduler;
+package org.distributedScheduler.biz.task;
 
 import java.util.Set;
 
@@ -11,7 +11,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 
-public class DataProcessSpringInitation implements
+public class TaskProcessSpringInitation implements
 		BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
 
 	private Scanner scanner;

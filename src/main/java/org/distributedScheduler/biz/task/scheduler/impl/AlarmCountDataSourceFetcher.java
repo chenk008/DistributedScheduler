@@ -1,11 +1,10 @@
-package org.distributedScheduler.biz.dataFetecher.scheduler.impl;
+package org.distributedScheduler.biz.task.scheduler.impl;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import org.distributedScheduler.biz.dataFetecher.DataSourceFetcherType;
-import org.distributedScheduler.biz.dataFetecher.annotation.SingleRun;
-import org.distributedScheduler.biz.dataFetecher.scheduler.PeriodSchedulerDataSourceFetcher;
+import org.distributedScheduler.biz.task.annotation.SingleRun;
+import org.distributedScheduler.biz.task.scheduler.PeriodSchedulerDataSourceFetcher;
 
 @SingleRun
 public class AlarmCountDataSourceFetcher extends
@@ -26,11 +25,6 @@ public class AlarmCountDataSourceFetcher extends
 	@Override
 	protected int getDefaultPeriod() {
 		return 60;
-	}
-
-	@Override
-	public DataSourceFetcherType getDataSourceFetcherType() {
-		return DataSourceFetcherType.ALARM_COUNT;
 	}
 
 	@Override

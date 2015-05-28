@@ -1,4 +1,4 @@
-package org.distributedScheduler.biz.dataFetecher.scheduler;
+package org.distributedScheduler.biz.task.scheduler;
 
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -10,9 +10,9 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Resource;
 
 import org.apache.commons.lang.StringUtils;
-import org.distributedScheduler.biz.dataFetecher.DataSourceFetcher;
-import org.distributedScheduler.biz.dataFetecher.annotation.SingleRun;
-import org.distributedScheduler.lock.DistributedLock;
+import org.distributedScheduler.biz.lock.DistributedLock;
+import org.distributedScheduler.biz.task.DataSourceFetcher;
+import org.distributedScheduler.biz.task.annotation.SingleRun;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
