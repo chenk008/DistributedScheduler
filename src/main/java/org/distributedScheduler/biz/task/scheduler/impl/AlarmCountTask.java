@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.distributedScheduler.biz.task.annotation.SingleRun;
 import org.distributedScheduler.biz.task.scheduler.PeriodSchedulerTask;
+import org.joda.time.DateTime;
 
 @SingleRun
 public class AlarmCountTask extends PeriodSchedulerTask {
@@ -13,6 +14,8 @@ public class AlarmCountTask extends PeriodSchedulerTask {
 	protected Map<String, Object> getData() {
 		Map<String, Object> datas = new HashMap<String, Object>();
 		datas.put("value", Integer.valueOf(1));
+		System.out.println(new DateTime().toString("yyyy-MM-dd HH:mm:ss")
+				+ AlarmCountTask.class + "_" + datas);
 		return datas;
 	}
 

@@ -31,5 +31,10 @@
 		</constructor-arg>
 	</bean>
 
+	<bean id="configService"
+		class="org.distributedScheduler.biz.config.impl.ConfigServiceImpl"
+		init-method="init">
+	</bean>
+
 </beans>
 

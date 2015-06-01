@@ -10,6 +10,10 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Resource;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.Watcher.Event.EventType;
 import org.distributedScheduler.biz.config.ConfigService;
 import org.distributedScheduler.biz.lock.DistributedLock;
 import org.distributedScheduler.biz.task.Task;
@@ -30,8 +34,6 @@ public abstract class PeriodSchedulerTask implements Task {
 	private static final Logger logger = LoggerFactory
 			.getLogger(PeriodSchedulerTask.class);
 
-	private static final String PERIOD_CONFIG_PATH = "/distributedScheduler/period/";
-
 	protected static ScheduledExecutorService POOL = Executors
 			.newScheduledThreadPool(10);
 
@@ -45,6 +47,9 @@ public abstract class PeriodSchedulerTask implements Task {
 
 	private FetcherStatus status = FetcherStatus.INIT;
 
+	private String configPath = ConfigService.PERIOD_CONFIG_PATH + "/"
+			+ this.getClass().getName();
+
 	@Override
 	public void init() {
 		SingleRun s = PeriodSchedulerTask.this.getClass().getAnnotation(
@@ -52,12 +57,13 @@ public abstract class PeriodSchedulerTask implements Task {
 		if (s != null) {
 			try {
 				String lockKey = PeriodSchedulerTask.this.getClass().getName();
-				int expireTime = getPeriod() - 1;
+				int period = getPeriod();
+				int expireTime = period - 1;
 				if (expireTime <= 0) {
 					expireTime = 1;
 				}
 				if (distributedLock.tryLock(lockKey, expireTime)) {
-					submitTask(getPeriod());
+					submitTask(period);
 					status = FetcherStatus.RUNNING;
 				} else {
 					status = FetcherStatus.LOCK_FAILED;
@@ -71,6 +77,27 @@ public abstract class PeriodSchedulerTask implements Task {
 			submitTask(getPeriod());
 			status = FetcherStatus.RUNNING;
 		}
+		Watcher watcher = new Watcher() {
+
+			@Override
+			public void process(WatchedEvent event) {
+				EventType et = event.getType();
+				switch (et) {
+				case NodeCreated:
+				case NodeDataChanged:
+					String period = configService.getConfig(event.getPath());
+					if (StringUtils.isNotBlank(period)) {
+						applyPeriod(Integer.parseInt(period));
+					}
+					configService.addWatcher(configPath, this);
+					break;
+				default:
+					break;
+				}
+			}
+
+		};
+		configService.addWatcher(configPath, watcher);
 	}
 
 	private class WorkTask implements Runnable {
@@ -110,8 +137,7 @@ public abstract class PeriodSchedulerTask implements Task {
 	private int getPeriod() {
 		int period = 0;
 		try {
-			String data = configService.getConfig(PERIOD_CONFIG_PATH
-					+ this.getClass().getName());
+			String data = configService.getConfig(configPath);
 			if (StringUtils.isBlank(data)) {
 				period = getDefaultPeriod();
 			} else {
@@ -124,9 +150,9 @@ public abstract class PeriodSchedulerTask implements Task {
 	}
 
 	public boolean changePeriod(int period) {
+		configService.putConfig(configPath, String.valueOf(period),
+				CreateMode.PERSISTENT);
 		return true;
-		// return Diamond.publishSingle(this.getClass().getName(),
-		// "SchedulerDataSourceFetcher", Integer.toString(period));
 	}
 
 	private void applyPeriod(int period) {
