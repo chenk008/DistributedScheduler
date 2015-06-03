@@ -36,11 +36,13 @@
 ##例子：使用cron表达式来定义规则
 		public class CronTestTask extends CronSchedulerTask {
 
+			//cron表达式
 			@Override
 			public String getCronExpression() {
 				return "0/5 * * * * ? *";
 			}
 
+			//开始时间
 			@Override
 			public String getStartTime() {
 				return "2015-05-01 00:00:00";
