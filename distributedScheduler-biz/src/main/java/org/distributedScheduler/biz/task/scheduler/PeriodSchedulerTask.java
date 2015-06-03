@@ -84,11 +84,8 @@ public abstract class PeriodSchedulerTask implements Task {
 				EventType et = event.getType();
 				switch (et) {
 				case NodeDeleted:
-					String period = configService.getConfig(configPath);
-					if (StringUtils.isNotBlank(period)) {
-						applyPeriod(Integer.parseInt(period));
-					}
-					configService.addWatcher(configPath, this);
+					applyPeriod(getPeriod());
+					configService.addWatcher(lockNode, this);
 					break;
 				default:
 					break;
@@ -97,6 +94,8 @@ public abstract class PeriodSchedulerTask implements Task {
 
 		};
 		configService.addWatcher(lockNode, watcher);
+
+		// TODO 监听配置
 	}
 
 	private class WorkTask implements Runnable {

@@ -80,11 +80,8 @@ public abstract class CronSchedulerTask implements Task, Job {
 				EventType et = event.getType();
 				switch (et) {
 				case NodeDeleted:
-					String period = configService.getConfig(configPath);
-					if (StringUtils.isNotBlank(period)) {
-						submitTask();
-					}
-					configService.addWatcher(configPath, this);
+					submitTask();
+					configService.addWatcher(lockNode, this);
 					break;
 				default:
 					break;
@@ -93,6 +90,8 @@ public abstract class CronSchedulerTask implements Task, Job {
 
 		};
 		configService.addWatcher(lockNode, watcher);
+
+		// TODO 监听配置
 	}
 
 	private void submitTask() {
@@ -103,7 +102,8 @@ public abstract class CronSchedulerTask implements Task, Job {
 				.newTrigger()
 				.withIdentity(triggerKey)
 				.withSchedule(
-						CronScheduleBuilder.cronSchedule(getCronExpression())
+						CronScheduleBuilder.cronSchedule(
+								getRealCronExpression())
 								.withMisfireHandlingInstructionFireAndProceed())
 				.startAt(df.parseDateTime(getStartTime()).toDate()).build();
 		try {
@@ -114,6 +114,22 @@ public abstract class CronSchedulerTask implements Task, Job {
 			status = TaskStatus.STOP;
 		}
 
+	}
+
+	// 优先获取zk上配置的cron表达式
+	private String getRealCronExpression() {
+		String cronExpression = null;
+		try {
+			String data = configService.getConfig(configPath);
+			if (StringUtils.isBlank(data)) {
+				cronExpression = getCronExpression();
+			} else {
+				cronExpression = data;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return cronExpression;
 	}
 
 	@Override

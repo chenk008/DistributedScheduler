@@ -21,7 +21,7 @@
 
 	<bean id="zooKeeper" class="org.apache.zookeeper.ZooKeeper">
 		<constructor-arg index="0">
-			<value>localhost</value>
+			<value>10.2.38.86</value>
 		</constructor-arg>
 		<constructor-arg index="1">
 			<value>2181</value>
