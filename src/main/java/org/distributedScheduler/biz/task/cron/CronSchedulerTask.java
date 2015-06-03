@@ -51,7 +51,8 @@ public abstract class CronSchedulerTask implements Task, Job {
 					.withIdentity(triggerKey)
 					.withSchedule(
 							CronScheduleBuilder
-									.cronSchedule(getCronExpression()))
+									.cronSchedule(getCronExpression())
+									.withMisfireHandlingInstructionFireAndProceed())
 					.startAt(df.parseDateTime(getStartTime()).toDate()).build();
 
 			scheduler.scheduleJob(job, trigger);

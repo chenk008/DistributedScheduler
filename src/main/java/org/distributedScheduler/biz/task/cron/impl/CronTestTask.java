@@ -10,7 +10,7 @@ public class CronTestTask extends CronSchedulerTask {
 
 	@Override
 	public String getCronExpression() {
-		return "0/10 * * * * ? *";
+		return "0/5 * * * * ? *";
 	}
 
 	@Override
@@ -22,8 +22,15 @@ public class CronTestTask extends CronSchedulerTask {
 	public Map<String, Object> getData() {
 		Map<String, Object> datas = new HashMap<String, Object>();
 		datas.put("value", Integer.valueOf(1));
-		System.out.println(new DateTime().toString("yyyy-MM-dd HH:mm:ss")
-				+ CronTestTask.class + "_" + datas);
+		String tmp = new DateTime().toString("yyyy-MM-dd HH:mm:ss")
+				+ CronTestTask.class + "_" + datas;
+		try {
+			Thread.sleep(6000L);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println(tmp);
 		return datas;
 	}
 
