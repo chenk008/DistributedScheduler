@@ -1,4 +1,4 @@
-package org.distributedScheduler.util;
+package org.distributedScheduler.biz.util;
 
 import java.io.UnsupportedEncodingException;
 

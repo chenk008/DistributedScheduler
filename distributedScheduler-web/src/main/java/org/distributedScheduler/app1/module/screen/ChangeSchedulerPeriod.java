@@ -8,22 +8,22 @@ import org.distributedScheduler.biz.task.TaskFactory;
 import com.alibaba.citrus.turbine.dataresolver.Param;
 
 /**
- * localhost:8080/ReScheduleCronTask.json?taskType=
- * org.distributedScheduler.biz.task.cron.impl.CronTestTask&cronExpression=10
+ * localhost:8080/ChangeSchedulerPeriod.json?taskType=
+ * org.distributedScheduler.biz.task.scheduler.impl.AlarmCountTask&period=10
  * 
  * 修改定时任务的周期
  * 
  * @author wuhua.ck
  *
  */
-public class ReScheduleCronTask {
+public class ChangeSchedulerPeriod {
 	@Resource
 	private TaskFactory taskFactory;
 
 	public ResultMsg execute(@Param("taskType") String taskType,
-			@Param("cronExpression") String cronExpression) {
+			@Param("period") int period) {
 		ResultMsg result = new ResultMsg();
-		taskFactory.reScheduleCronTask(taskType, cronExpression);
+		taskFactory.changeScheduleTask(taskType, period);
 		result.setSuccess(true);
 		return result;
 	}

@@ -10,7 +10,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
 import org.distributedScheduler.biz.lock.DistributedLock;
-import org.distributedScheduler.util.ZKUtils;
+import org.distributedScheduler.biz.util.ZKUtils;
 
 public class ZooKeeperDistributedLock implements DistributedLock {
 

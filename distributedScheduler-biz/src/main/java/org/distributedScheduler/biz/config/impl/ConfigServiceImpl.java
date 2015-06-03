@@ -9,7 +9,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 import org.distributedScheduler.biz.config.ConfigService;
-import org.distributedScheduler.util.ZKUtils;
+import org.distributedScheduler.biz.util.ZKUtils;
 
 public class ConfigServiceImpl implements ConfigService {
 
