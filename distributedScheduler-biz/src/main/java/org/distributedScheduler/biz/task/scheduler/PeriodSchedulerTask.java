@@ -16,6 +16,7 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.distributedScheduler.biz.config.ConfigService;
 import org.distributedScheduler.biz.lock.DistributedLock;
+import org.distributedScheduler.biz.lock.impl.ZooKeeperDistributedLock;
 import org.distributedScheduler.biz.task.Task;
 import org.distributedScheduler.biz.task.annotation.SingleRun;
 import org.joda.time.DateTime;
@@ -50,6 +51,9 @@ public abstract class PeriodSchedulerTask implements Task {
 	private String configPath = ConfigService.PERIOD_CONFIG_PATH + "/"
 			+ this.getClass().getName();
 
+	private String lockNode = ZooKeeperDistributedLock.LOCK_PATH + "/"
+			+ this.getClass().getName();
+
 	@Override
 	public void init() {
 		SingleRun s = PeriodSchedulerTask.this.getClass().getAnnotation(
@@ -57,13 +61,8 @@ public abstract class PeriodSchedulerTask implements Task {
 		if (s != null) {
 			try {
 				String lockKey = PeriodSchedulerTask.this.getClass().getName();
-				int period = getPeriod();
-				int expireTime = period - 1;
-				if (expireTime <= 0) {
-					expireTime = 1;
-				}
-				if (distributedLock.tryLock(lockKey, expireTime)) {
-					submitTask(period);
+				if (distributedLock.tryLock(lockKey, 0)) {
+					submitTask(getPeriod());
 					status = TaskStatus.RUNNING;
 				} else {
 					status = TaskStatus.LOCK_FAILED;
@@ -77,15 +76,15 @@ public abstract class PeriodSchedulerTask implements Task {
 			submitTask(getPeriod());
 			status = TaskStatus.RUNNING;
 		}
+		// 自动容灾，监控lock
 		Watcher watcher = new Watcher() {
 
 			@Override
 			public void process(WatchedEvent event) {
 				EventType et = event.getType();
 				switch (et) {
-				case NodeCreated:
-				case NodeDataChanged:
-					String period = configService.getConfig(event.getPath());
+				case NodeDeleted:
+					String period = configService.getConfig(configPath);
 					if (StringUtils.isNotBlank(period)) {
 						applyPeriod(Integer.parseInt(period));
 					}
@@ -97,7 +96,7 @@ public abstract class PeriodSchedulerTask implements Task {
 			}
 
 		};
-		configService.addWatcher(configPath, watcher);
+		configService.addWatcher(lockNode, watcher);
 	}
 
 	private class WorkTask implements Runnable {
@@ -159,11 +158,10 @@ public abstract class PeriodSchedulerTask implements Task {
 		if (period > 0) {
 			if (future != null) {
 				future.cancel(true);
-			}
+				// 等到老任务完结
+				while (!future.isCancelled()) {
 
-			// 等到老任务完结
-			while (!future.isCancelled()) {
-
+				}
 			}
 			submitTask(period);
 		}

@@ -2,7 +2,17 @@ package org.distributedScheduler.biz.task.cron;
 
 import java.util.Map;
 
+import javax.annotation.Resource;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.Watcher.Event.EventType;
+import org.distributedScheduler.biz.config.ConfigService;
+import org.distributedScheduler.biz.lock.DistributedLock;
+import org.distributedScheduler.biz.lock.impl.ZooKeeperDistributedLock;
 import org.distributedScheduler.biz.task.Task;
+import org.distributedScheduler.biz.task.annotation.SingleRun;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.quartz.CronScheduleBuilder;
@@ -38,23 +48,65 @@ public abstract class CronSchedulerTask implements Task, Job {
 
 	private TaskStatus status = TaskStatus.INIT;
 
+	@Resource
+	private DistributedLock distributedLock;
+
+	@Resource
+	private ConfigService configService;
+
+	private String configPath = ConfigService.PERIOD_CONFIG_PATH + "/"
+			+ this.getClass().getName();
+
+	private String lockNode = ZooKeeperDistributedLock.LOCK_PATH + "/"
+			+ this.getClass().getName();
+
 	@Override
 	public void init() {
+		SingleRun s = CronSchedulerTask.this.getClass().getAnnotation(
+				SingleRun.class);
+		if (s != null) {
+			String lockKey = CronSchedulerTask.this.getClass().getName();
+			if (distributedLock.tryLock(lockKey, 0)) {
+				submitTask();
+			}
+		} else {
+			submitTask();
+		}
+		// 自动容灾，监控lock
+		Watcher watcher = new Watcher() {
+
+			@Override
+			public void process(WatchedEvent event) {
+				EventType et = event.getType();
+				switch (et) {
+				case NodeDeleted:
+					String period = configService.getConfig(configPath);
+					if (StringUtils.isNotBlank(period)) {
+						submitTask();
+					}
+					configService.addWatcher(configPath, this);
+					break;
+				default:
+					break;
+				}
+			}
+
+		};
+		configService.addWatcher(lockNode, watcher);
+	}
+
+	private void submitTask() {
+		JobDetail job = JobBuilder.newJob(this.getClass())
+				.withIdentity(this.getClass().getName()).build();
+		DateTimeFormatter df = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+		Trigger trigger = TriggerBuilder
+				.newTrigger()
+				.withIdentity(triggerKey)
+				.withSchedule(
+						CronScheduleBuilder.cronSchedule(getCronExpression())
+								.withMisfireHandlingInstructionFireAndProceed())
+				.startAt(df.parseDateTime(getStartTime()).toDate()).build();
 		try {
-			JobDetail job = JobBuilder.newJob(this.getClass())
-					.withIdentity(this.getClass().getName()).build();
-
-			DateTimeFormatter df = DateTimeFormat
-					.forPattern("yyyy-MM-dd HH:mm:ss");
-			Trigger trigger = TriggerBuilder
-					.newTrigger()
-					.withIdentity(triggerKey)
-					.withSchedule(
-							CronScheduleBuilder
-									.cronSchedule(getCronExpression())
-									.withMisfireHandlingInstructionFireAndProceed())
-					.startAt(df.parseDateTime(getStartTime()).toDate()).build();
-
 			scheduler.scheduleJob(job, trigger);
 			status = TaskStatus.RUNNING;
 		} catch (SchedulerException e) {

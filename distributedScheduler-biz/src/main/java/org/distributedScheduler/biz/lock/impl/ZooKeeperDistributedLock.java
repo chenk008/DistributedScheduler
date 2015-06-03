@@ -14,20 +14,22 @@ import org.distributedScheduler.biz.util.ZKUtils;
 
 public class ZooKeeperDistributedLock implements DistributedLock {
 
+	public static final String LOCK_PATH = "/distributedScheduler/lock";
+
 	@Resource
 	private ZooKeeper zooKeeper;
 
 	public void init() throws Exception {
-		if (zooKeeper.exists("/distributedScheduler/lock", false) == null) {
-			ZKUtils.createNodePath(zooKeeper, "/distributedScheduler/lock");
+		if (zooKeeper.exists(LOCK_PATH, false) == null) {
+			ZKUtils.createNodePath(zooKeeper, LOCK_PATH);
 		}
 	}
 
 	@Override
 	public boolean tryLock(String lockKey, long expireTime) {
 		try {
-			String result = zooKeeper.create("/distributedScheduler/lock/"
-					+ lockKey, getMessage().getBytes(), Ids.OPEN_ACL_UNSAFE,
+			String result = zooKeeper.create(LOCK_PATH + "/" + lockKey,
+					getMessage().getBytes(), Ids.OPEN_ACL_UNSAFE,
 					CreateMode.EPHEMERAL);
 			System.out.println(result);
 			return true;
@@ -40,7 +42,7 @@ public class ZooKeeperDistributedLock implements DistributedLock {
 	@Override
 	public void unlock(String lockKey) {
 		try {
-			zooKeeper.delete("/distributedScheduler/lock/" + lockKey, -1);
+			zooKeeper.delete(LOCK_PATH + "/" + lockKey, -1);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		} catch (KeeperException e) {

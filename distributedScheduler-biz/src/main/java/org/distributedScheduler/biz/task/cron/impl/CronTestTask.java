@@ -3,9 +3,11 @@ package org.distributedScheduler.biz.task.cron.impl;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.distributedScheduler.biz.task.annotation.SingleRun;
 import org.distributedScheduler.biz.task.cron.CronSchedulerTask;
 import org.joda.time.DateTime;
 
+@SingleRun
 public class CronTestTask extends CronSchedulerTask {
 
 	@Override

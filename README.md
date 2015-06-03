@@ -33,7 +33,7 @@
 			init-method="init">
 		</bean>
 
-##例子：使用cron表达式来定义规则
+##例子：使用cron表达式来定义规则，org.distributedScheduler包下的CronSchedulerTask子类自动成为spring bean，可以获取spring中其他的bean
 		public class CronTestTask extends CronSchedulerTask {
 
 			//cron表达式

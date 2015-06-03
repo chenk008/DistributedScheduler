@@ -1,7 +1,5 @@
 package org.distributedScheduler.biz.task;
 
-import java.util.Map;
-
 public interface Task {
 
 	/**
