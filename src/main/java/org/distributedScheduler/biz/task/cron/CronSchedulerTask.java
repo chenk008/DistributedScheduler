@@ -21,13 +21,26 @@ import org.quartz.impl.StdSchedulerFactory;
 
 public abstract class CronSchedulerTask implements Task, Job {
 
-	private static SchedulerFactory schedulerFactory = new StdSchedulerFactory();
+	private static Scheduler scheduler;
+
+	static {
+		SchedulerFactory schedulerFactory = new StdSchedulerFactory();
+		try {
+			scheduler = schedulerFactory.getScheduler();
+			scheduler.start();
+		} catch (SchedulerException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private TriggerKey triggerKey = new TriggerKey(this.getClass().getName(),
+			"CronSchedulerTask");
+
+	private TaskStatus status = TaskStatus.INIT;
 
 	@Override
 	public void init() {
-		Scheduler scheduler;
 		try {
-			scheduler = schedulerFactory.getScheduler();
 			JobDetail job = JobBuilder.newJob(this.getClass())
 					.withIdentity(this.getClass().getName()).build();
 
@@ -35,18 +48,17 @@ public abstract class CronSchedulerTask implements Task, Job {
 					.forPattern("yyyy-MM-dd HH:mm:ss");
 			Trigger trigger = TriggerBuilder
 					.newTrigger()
-					.withIdentity(
-							new TriggerKey(this.getClass().getName(),
-									"CronSchedulerTask"))
+					.withIdentity(triggerKey)
 					.withSchedule(
 							CronScheduleBuilder
 									.cronSchedule(getCronExpression()))
 					.startAt(df.parseDateTime(getStartTime()).toDate()).build();
 
 			scheduler.scheduleJob(job, trigger);
-			scheduler.start();
+			status = TaskStatus.RUNNING;
 		} catch (SchedulerException e) {
 			e.printStackTrace();
+			status = TaskStatus.STOP;
 		}
 
 	}
@@ -59,13 +71,34 @@ public abstract class CronSchedulerTask implements Task, Job {
 
 	@Override
 	public void shutdown() {
-		// TODO Auto-generated method stub
-
+		try {
+			scheduler.unscheduleJob(triggerKey);
+		} catch (SchedulerException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
 	public TaskStatus getStatus() {
-		return null;
+		return status;
+	}
+
+	public void reScheduleJob(String cronExpression) {
+		DateTimeFormatter df = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+		try {
+			scheduler.rescheduleJob(
+					triggerKey,
+					TriggerBuilder
+							.newTrigger()
+							.withIdentity(triggerKey)
+							.withSchedule(
+									CronScheduleBuilder
+											.cronSchedule(cronExpression))
+							.startAt(df.parseDateTime(getStartTime()).toDate())
+							.build());
+		} catch (SchedulerException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public abstract String getCronExpression();
