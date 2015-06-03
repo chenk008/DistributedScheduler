@@ -14,9 +14,9 @@ public interface Task {
 	 */
 	void shutdown();
 
-	FetcherStatus getStatus();
+	TaskStatus getStatus();
 
-	public enum FetcherStatus {
+	public enum TaskStatus {
 		INIT, RUNNING, LOCK_FAILED, STOP;
 	}
 }

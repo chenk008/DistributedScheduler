@@ -45,7 +45,7 @@ public abstract class PeriodSchedulerTask implements Task {
 	@Resource
 	private ConfigService configService;
 
-	private FetcherStatus status = FetcherStatus.INIT;
+	private TaskStatus status = TaskStatus.INIT;
 
 	private String configPath = ConfigService.PERIOD_CONFIG_PATH + "/"
 			+ this.getClass().getName();
@@ -64,9 +64,9 @@ public abstract class PeriodSchedulerTask implements Task {
 				}
 				if (distributedLock.tryLock(lockKey, expireTime)) {
 					submitTask(period);
-					status = FetcherStatus.RUNNING;
+					status = TaskStatus.RUNNING;
 				} else {
-					status = FetcherStatus.LOCK_FAILED;
+					status = TaskStatus.LOCK_FAILED;
 				}
 			} catch (Exception e) {
 				// 加锁的发生异常
@@ -75,7 +75,7 @@ public abstract class PeriodSchedulerTask implements Task {
 			}
 		} else {
 			submitTask(getPeriod());
-			status = FetcherStatus.RUNNING;
+			status = TaskStatus.RUNNING;
 		}
 		Watcher watcher = new Watcher() {
 
@@ -122,11 +122,11 @@ public abstract class PeriodSchedulerTask implements Task {
 		if (s != null) {
 			distributedLock.unlock(this.getClass().getName());
 		}
-		status = FetcherStatus.STOP;
+		status = TaskStatus.STOP;
 	}
 
 	@Override
-	public FetcherStatus getStatus() {
+	public TaskStatus getStatus() {
 		return status;
 	}
 
