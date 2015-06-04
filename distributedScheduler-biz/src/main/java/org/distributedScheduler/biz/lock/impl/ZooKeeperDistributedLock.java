@@ -5,6 +5,7 @@ import java.net.InetAddress;
 
 import javax.annotation.Resource;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
@@ -27,7 +28,16 @@ public class ZooKeeperDistributedLock implements DistributedLock {
 
 	@Override
 	public boolean tryLock(String lockKey, long expireTime) {
+		String data = null;
 		try {
+			data = ZKUtils.getNode(zooKeeper, LOCK_PATH + "/" + lockKey);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		try {
+			if (StringUtils.equals(getMessage(), data)) {
+				return true;
+			}
 			String result = zooKeeper.create(LOCK_PATH + "/" + lockKey,
 					getMessage().getBytes(), Ids.OPEN_ACL_UNSAFE,
 					CreateMode.EPHEMERAL);

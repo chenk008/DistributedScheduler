@@ -1,5 +1,6 @@
 package org.distributedScheduler.biz.task;
 
+
 public interface Task {
 
 	/**
@@ -13,6 +14,8 @@ public interface Task {
 	void shutdown();
 
 	TaskStatus getStatus();
+
+	boolean changePeriod(String period);
 
 	public enum TaskStatus {
 		INIT, RUNNING, LOCK_FAILED, STOP;

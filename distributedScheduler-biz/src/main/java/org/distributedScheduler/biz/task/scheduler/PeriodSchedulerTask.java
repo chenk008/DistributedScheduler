@@ -56,13 +56,70 @@ public abstract class PeriodSchedulerTask implements Task {
 
 	@Override
 	public void init() {
+		submitTask();
+		// 自动容灾，监控lock
+		SingleRun s = PeriodSchedulerTask.this.getClass().getAnnotation(
+				SingleRun.class);
+		if (s != null) {
+			Watcher watcher = new Watcher() {
+				@Override
+				public void process(WatchedEvent event) {
+					EventType et = event.getType();
+					switch (et) {
+					case NodeDeleted:
+						submitTask();
+						configService.addWatcher(lockNode, this);
+						break;
+					default:
+						break;
+					}
+				}
+			};
+			configService.addWatcher(lockNode, watcher);
+		}
+
+		// 监听配置
+		Watcher configWatcher = new Watcher() {
+
+			@Override
+			public void process(WatchedEvent event) {
+				EventType et = event.getType();
+				switch (et) {
+				case NodeCreated:
+				case NodeDataChanged:
+					// 判断当前是否已经在运行了
+					if (future != null) {
+						future.cancel(true);
+						// 等到老任务完结
+						while (!future.isCancelled()) {
+
+						}
+						submitTask();
+					}
+					configService.addWatcher(configPath, this);
+					break;
+				default:
+					break;
+				}
+			}
+
+		};
+		configService.addWatcher(configPath, configWatcher);
+
+	}
+
+	/**
+	 * 提交任务 1.启动时 2.任务容灾时 3.任务变更时
+	 */
+	private void submitTask() {
+		boolean needStart = false;
 		SingleRun s = PeriodSchedulerTask.this.getClass().getAnnotation(
 				SingleRun.class);
 		if (s != null) {
 			try {
 				String lockKey = PeriodSchedulerTask.this.getClass().getName();
 				if (distributedLock.tryLock(lockKey, 0)) {
-					submitTask(getPeriod());
+					needStart = true;
 					status = TaskStatus.RUNNING;
 				} else {
 					status = TaskStatus.LOCK_FAILED;
@@ -73,42 +130,48 @@ public abstract class PeriodSchedulerTask implements Task {
 			} finally {
 			}
 		} else {
-			submitTask(getPeriod());
+			submitTask();
 			status = TaskStatus.RUNNING;
 		}
-		// 自动容灾，监控lock
-		Watcher watcher = new Watcher() {
 
-			@Override
-			public void process(WatchedEvent event) {
-				EventType et = event.getType();
-				switch (et) {
-				case NodeDeleted:
-					applyPeriod(getPeriod());
-					configService.addWatcher(lockNode, this);
-					break;
-				default:
-					break;
+		if (needStart) {
+			DateTimeFormatter format = DateTimeFormat
+					.forPattern("yyyy-MM-dd HH:mm:ss");
+			long start = format.parseDateTime(getStartTime()).getMillis();
+			long now = System.currentTimeMillis();
+			long initialDelay = 0L;
+			long realPeriod = getPeriod() * 1000L;
+			if (start > now) {
+				initialDelay = start - now;
+			} else {
+				long multiple = (now - start) / realPeriod;
+				start += multiple * realPeriod;
+				if (start < now) {
+					start += realPeriod;
 				}
+				initialDelay = start - now;
 			}
-
-		};
-		configService.addWatcher(lockNode, watcher);
-
-		// TODO 监听配置
-	}
-
-	private class WorkTask implements Runnable {
-
-		@Override
-		public void run() {
-			if (Thread.interrupted()) {
-				return;
+			logger.error(this.getClass().getName()
+					+ ":startTime"
+					+ new DateTime(now + initialDelay)
+							.toString("yyyy-MM-dd HH:mm:ss"));
+			try {
+				future = POOL.scheduleAtFixedRate(new Runnable() {
+					@Override
+					public void run() {
+						if (Thread.interrupted()) {
+							return;
+						}
+						Map<String, Object> params = getData();
+						System.out.println(params);
+					}
+				}, initialDelay, realPeriod, TimeUnit.MILLISECONDS);
+			} catch (RejectedExecutionException ex) {
+				throw new TaskRejectedException(
+						"Executor  did not accept task: "
+								+ this.getClass().getName(), ex);
 			}
-			Map<String, Object> params = getData();
-			System.out.println(params);
 		}
-
 	}
 
 	@Override
@@ -121,6 +184,7 @@ public abstract class PeriodSchedulerTask implements Task {
 			distributedLock.unlock(this.getClass().getName());
 		}
 		status = TaskStatus.STOP;
+		future = null;
 	}
 
 	@Override
@@ -147,53 +211,11 @@ public abstract class PeriodSchedulerTask implements Task {
 		return period;
 	}
 
-	public boolean changePeriod(int period) {
+	@Override
+	public boolean changePeriod(String period) {
 		configService.putConfig(configPath, String.valueOf(period),
 				CreateMode.PERSISTENT);
 		return true;
-	}
-
-	private void applyPeriod(int period) {
-		if (period > 0) {
-			if (future != null) {
-				future.cancel(true);
-				// 等到老任务完结
-				while (!future.isCancelled()) {
-
-				}
-			}
-			submitTask(period);
-		}
-	}
-
-	private void submitTask(int period) {
-		DateTimeFormatter format = DateTimeFormat
-				.forPattern("yyyy-MM-dd HH:mm:ss");
-		long start = format.parseDateTime(getStartTime()).getMillis();
-		long now = System.currentTimeMillis();
-		long initialDelay = 0L;
-		long realPeriod = period * 1000L;
-		if (start > now) {
-			initialDelay = start - now;
-		} else {
-			long multiple = (now - start) / realPeriod;
-			start += multiple * realPeriod;
-			if (start < now) {
-				start += realPeriod;
-			}
-			initialDelay = start - now;
-		}
-		logger.error(this.getClass().getName()
-				+ ":startTime"
-				+ new DateTime(now + initialDelay)
-						.toString("yyyy-MM-dd HH:mm:ss"));
-		try {
-			future = POOL.scheduleAtFixedRate(new WorkTask(), initialDelay,
-					realPeriod, TimeUnit.MILLISECONDS);
-		} catch (RejectedExecutionException ex) {
-			throw new TaskRejectedException("Executor  did not accept task: "
-					+ this.getClass().getName(), ex);
-		}
 	}
 
 	/**

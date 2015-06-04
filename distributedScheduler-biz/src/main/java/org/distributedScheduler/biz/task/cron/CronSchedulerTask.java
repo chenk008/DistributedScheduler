@@ -5,6 +5,7 @@ import java.util.Map;
 import javax.annotation.Resource;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
@@ -62,26 +63,54 @@ public abstract class CronSchedulerTask implements Task, Job {
 
 	@Override
 	public void init() {
+		startTask();
+		// 自动容灾，监控lock
 		SingleRun s = CronSchedulerTask.this.getClass().getAnnotation(
 				SingleRun.class);
 		if (s != null) {
-			String lockKey = CronSchedulerTask.this.getClass().getName();
-			if (distributedLock.tryLock(lockKey, 0)) {
-				submitTask();
-			}
-		} else {
-			submitTask();
+			Watcher watcher = new Watcher() {
+				@Override
+				public void process(WatchedEvent event) {
+					EventType et = event.getType();
+					switch (et) {
+					case NodeDeleted:
+						startTask();
+						configService.addWatcher(lockNode, this);
+						break;
+					default:
+						break;
+					}
+				}
+			};
+			configService.addWatcher(lockNode, watcher);
 		}
-		// 自动容灾，监控lock
-		Watcher watcher = new Watcher() {
+
+		// 监听配置
+		Watcher configWatcher = new Watcher() {
 
 			@Override
 			public void process(WatchedEvent event) {
 				EventType et = event.getType();
 				switch (et) {
-				case NodeDeleted:
-					submitTask();
-					configService.addWatcher(lockNode, this);
+				case NodeCreated:
+				case NodeDataChanged:
+					// 判断当前是否已经在运行了
+					SingleRun s = CronSchedulerTask.this.getClass()
+							.getAnnotation(SingleRun.class);
+					if (s != null) {
+						String lockKey = CronSchedulerTask.this.getClass()
+								.getName();
+						if (distributedLock.tryLock(lockKey, 0)) {
+							reScheduleJob();
+							status = TaskStatus.RUNNING;
+						} else {
+							status = TaskStatus.LOCK_FAILED;
+						}
+					} else {
+						reScheduleJob();
+						status = TaskStatus.RUNNING;
+					}
+					configService.addWatcher(configPath, this);
 					break;
 				default:
 					break;
@@ -89,31 +118,66 @@ public abstract class CronSchedulerTask implements Task, Job {
 			}
 
 		};
-		configService.addWatcher(lockNode, watcher);
-
-		// TODO 监听配置
+		configService.addWatcher(configPath, configWatcher);
 	}
 
-	private void submitTask() {
-		JobDetail job = JobBuilder.newJob(this.getClass())
-				.withIdentity(this.getClass().getName()).build();
+	private void startTask() {
+		boolean needStart = false;
+		SingleRun s = CronSchedulerTask.this.getClass().getAnnotation(
+				SingleRun.class);
+		if (s != null) {
+			String lockKey = CronSchedulerTask.this.getClass().getName();
+			if (distributedLock.tryLock(lockKey, 0)) {
+				needStart = true;
+				status = TaskStatus.RUNNING;
+			} else {
+				status = TaskStatus.LOCK_FAILED;
+			}
+
+		} else {
+			needStart = true;
+		}
+		if (needStart) {
+			JobDetail job = JobBuilder.newJob(this.getClass())
+					.withIdentity(this.getClass().getName()).build();
+			DateTimeFormatter df = DateTimeFormat
+					.forPattern("yyyy-MM-dd HH:mm:ss");
+			Trigger trigger = TriggerBuilder
+					.newTrigger()
+					.withIdentity(triggerKey)
+					.withSchedule(
+							CronScheduleBuilder
+									.cronSchedule(getRealCronExpression())
+									.withMisfireHandlingInstructionFireAndProceed())
+					.startAt(df.parseDateTime(getStartTime()).toDate()).build();
+			try {
+				scheduler.scheduleJob(job, trigger);
+
+			} catch (SchedulerException e) {
+				e.printStackTrace();
+				status = TaskStatus.STOP;
+			}
+		}
+	}
+
+	private void reScheduleJob() {
 		DateTimeFormatter df = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
-		Trigger trigger = TriggerBuilder
-				.newTrigger()
-				.withIdentity(triggerKey)
-				.withSchedule(
-						CronScheduleBuilder.cronSchedule(
-								getRealCronExpression())
-								.withMisfireHandlingInstructionFireAndProceed())
-				.startAt(df.parseDateTime(getStartTime()).toDate()).build();
 		try {
-			scheduler.scheduleJob(job, trigger);
-			status = TaskStatus.RUNNING;
+			scheduler
+					.rescheduleJob(
+							triggerKey,
+							TriggerBuilder
+									.newTrigger()
+									.withIdentity(triggerKey)
+									.withSchedule(
+											CronScheduleBuilder
+													.cronSchedule(getRealCronExpression()))
+									.startAt(
+											df.parseDateTime(getStartTime())
+													.toDate()).build());
 		} catch (SchedulerException e) {
 			e.printStackTrace();
-			status = TaskStatus.STOP;
 		}
-
 	}
 
 	// 优先获取zk上配置的cron表达式
@@ -152,22 +216,11 @@ public abstract class CronSchedulerTask implements Task, Job {
 		return status;
 	}
 
-	public void reScheduleJob(String cronExpression) {
-		DateTimeFormatter df = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
-		try {
-			scheduler.rescheduleJob(
-					triggerKey,
-					TriggerBuilder
-							.newTrigger()
-							.withIdentity(triggerKey)
-							.withSchedule(
-									CronScheduleBuilder
-											.cronSchedule(cronExpression))
-							.startAt(df.parseDateTime(getStartTime()).toDate())
-							.build());
-		} catch (SchedulerException e) {
-			e.printStackTrace();
-		}
+	@Override
+	public boolean changePeriod(String period) {
+		configService.putConfig(configPath, String.valueOf(period),
+				CreateMode.PERSISTENT);
+		return true;
 	}
 
 	public abstract String getCronExpression();

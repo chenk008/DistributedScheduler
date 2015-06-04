@@ -8,7 +8,6 @@ import java.util.Set;
 import javax.annotation.Resource;
 
 import org.distributedScheduler.biz.task.TaskProcessSpringInitation.Scanner;
-import org.distributedScheduler.biz.task.cron.CronSchedulerTask;
 import org.distributedScheduler.biz.task.scheduler.PeriodSchedulerTask;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.context.ApplicationContext;
@@ -66,18 +65,8 @@ public class TaskFactory {
 		fetcher.init();
 	}
 
-	public synchronized void changeScheduleTask(String taskType, int period) {
+	public synchronized void changeScheduleTask(String taskType, String config) {
 		Task fetcher = fetchers.get(taskType);
-		if (fetcher instanceof PeriodSchedulerTask) {
-			((PeriodSchedulerTask) fetcher).changePeriod(period);
-		}
-	}
-
-	public synchronized void reScheduleCronTask(String taskType,
-			String cronExpression) {
-		Task task = fetchers.get(taskType);
-		if (task instanceof CronSchedulerTask) {
-			((CronSchedulerTask) task).reScheduleJob(cronExpression);
-		}
+		fetcher.changePeriod(config);
 	}
 }
