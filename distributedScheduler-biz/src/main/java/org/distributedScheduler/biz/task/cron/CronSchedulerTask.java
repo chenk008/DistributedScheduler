@@ -19,6 +19,7 @@ import org.joda.time.format.DateTimeFormatter;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.Job;
 import org.quartz.JobBuilder;
+import org.quartz.JobDataMap;
 import org.quartz.JobDetail;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -138,8 +139,11 @@ public abstract class CronSchedulerTask implements Task, Job {
 			needStart = true;
 		}
 		if (needStart) {
+			JobDataMap jobDataMap = new JobDataMap();
+			jobDataMap.put(this.getClass().getName(), this);
 			JobDetail job = JobBuilder.newJob(this.getClass())
-					.withIdentity(this.getClass().getName()).build();
+					.withIdentity(this.getClass().getName())
+					.usingJobData(jobDataMap).build();
 			DateTimeFormatter df = DateTimeFormat
 					.forPattern("yyyy-MM-dd HH:mm:ss");
 			Trigger trigger = TriggerBuilder
@@ -199,7 +203,9 @@ public abstract class CronSchedulerTask implements Task, Job {
 	@Override
 	public void execute(JobExecutionContext context)
 			throws JobExecutionException {
-		getData();
+		CronSchedulerTask task = (CronSchedulerTask) context.getJobDetail()
+				.getJobDataMap().get(this.getClass().getName());
+		task.getData();
 	}
 
 	@Override
